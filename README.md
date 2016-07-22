@@ -47,6 +47,8 @@ julia>  include("corner.jl")
 
 Julia code file descriptions:
 
+```
+
 fit_tyc3559_norv.jl:				Computes markov chain for TYC 3559 fit to Kepler with correlated noise (no RV data).
 
 fit_tyc3559_restart.jl:				Restarts initial run to compute final 10^4 step chain.
@@ -76,8 +78,10 @@ model_tyc3559_v2.jl:				TYC 3559 photometric model with new parameterization (v2
 bandec.jl:					Complex version of numerical recipes LU decomposition for banded matrix routine.
 
 banbks.jl:					Complex version of numerical recipes LU back-substitution for banded matrix routine.
-
+```
 
 Python code:
 
+```
 call_corner.jl:					Calls corner.py to make plot for the paper.
+```
