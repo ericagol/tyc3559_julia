@@ -16,17 +16,17 @@ To reproduce these results:
 
 2). Start up Julia.  Run the script:
 
-'''
+```
 julia>  include("fit_tyc3559_norv.jl")
-'''
+```
 
 3). Let it run - takes about 5 hours on 2015 Macbook Pro.
 
 4). Next, restart & run:
 
-'''
+```
 julia>  include("fit_tyc3559_restart.jl")
-'''
+```
 
   This takes another 5 hours.
 
@@ -35,10 +35,15 @@ julia>  include("fit_tyc3559_restart.jl")
 
 6). Create a file to read into Python:
 
+```
 julia>  include("corner.jl")
+```
 
 7). Start up python & create corner plot:
+
+```
 >>>    import call_corner.py
+```
 
 Julia code file descriptions:
 
