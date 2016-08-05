@@ -58,12 +58,13 @@ include("kepler.jl")
 using JLD
 using PyPlot
 
-@load "tyc3559_mcmc_norv_fixedkernel_v03.jld"
+#@load "tyc3559_mcmc_norv_fixedkernel_v03.jld"
+@load "tyc3559_mcmc_norv_fixedkernel_v03_thin.jld"
 
-par_mcmc[:,:,4]=par_mcmc[:,:,4].*(1.0-par_mcmc[:,:,15])
-par_mcmc[:,:,13]=par_mcmc[:,:,13].*(1.0-par_mcmc[:,:,15])
-pname[4] = "D*(1-f3)"
-pname[13] = "a2c*(1-f3)"
+#par_mcmc[:,:,4]=par_mcmc[:,:,4].*(1.0-par_mcmc[:,:,15])
+#par_mcmc[:,:,13]=par_mcmc[:,:,13].*(1.0-par_mcmc[:,:,15])
+#pname[4] = "D*(1-f3)"
+#pname[13] = "a2c*(1-f3)"
 # Derived parameters:
 
 # 1). Density of star B:
@@ -77,7 +78,7 @@ mrhoB = mean(rhoB); srhoB = std(rhoB)
 println("Density of star B: ",mrhoB," +- ",srhoB)
 
 # make histogram:
-nhist = 20
+nhist = 80
 p1 = mrhoB-3*srhoB; p2 = mrhoB+3*srhoB
 param_grid,param_hist,nmiss = hist_param(rhoB,p1,p2,nhist)
 
@@ -101,7 +102,7 @@ alpha_beam = -0.898
 # Compute radial velocity in km/s:
 vr = par_mcmc[:,:,12]/(3.0-alpha_beam)*C/1e5
 # Convert to mass of brown dwarf, assuming mass of star:
-mB = 1.0
+mB = 1.76
 semi = (GRAV * mB * MSUN)^(1//3).* (period.*24*3600/2/pi).^(2//3)
 aonr = period./tdur.*sqrt(1.0-b.^2)/pi
 inc = acos(b./aonr)
@@ -112,29 +113,54 @@ mmBb1=mean(mBb1)
 smBb1=std(mBb1)
 println("Mass of Bb from Doppler: ",mmBb1," +- ",smBb1," M_Jupiter")
 
-# 3). Tidal distortion mass of brown dwarf:
+# 3a). Tidal distortion mass of brown dwarf:
 # Equation 2 from Faigler & Mazeh:
 q1 = par_mcmc[:,:,6]; q2 = par_mcmc[:,:,7]
 u1 = 2.*sqrt(q1).*q2
 u2 = sqrt(q1).*(1-2.*q2)
-g = 0.3+rand(size(q1))*0.7
-#g = 0.65
+#g = 0.3+rand(size(q1))*0.7
+g = 0.65
 alpha_ellip = 0.15.*(15.0+u1).*(1.0+g)./(3.0-u1)
 mBb2 = mB * MSUN .* aonr.^3./alpha_ellip.* abs(par_mcmc[:,:,13])./MJUPITER./sin(inc).^2
 mmBb2 = mean(mBb2)
 smBb2 = std(mBb2)
 println("Mass of Bb from tides: ",mmBb2," +- ",smBb2," M_Jupiter")
-p1 = minimum([mmBb2-3smBb2,mmBb1-3smBb1])
-p2 = maximum([mmBb2+3smBb2,mmBb1+3smBb1])
+
+# 3b). Compute the mass from the RV:
+krv0 =  5.985117177227862
+sig_krv = 0.43164531668541845
+krv = krv0 + sig_krv*randn(nwalkers,nsteps)
+
+mBb3 = (period.*24.*3600.*(krv.*1e5).^3.*(mB*MSUN)^2/(2pi*GRAV)).^(1//3)./sin(inc)./MJUPITER
+mmBb3 = mean(mBb3)
+smBb3 = std(mBb3)
+println("Mass of Bb from RV: ",mmBb3," +- ",smBb3," M_Jupiter")
+
+p1 = minimum([mmBb2-3smBb2,mmBb1-3smBb1,mmBb3-3smBb3])
+p2 = maximum([mmBb2+3smBb2,mmBb1+3smBb1,mmBb3+3smBb3])
 param_grid,param_hist1,nmiss = hist_param(mBb1,p1,p2,nhist)
 param_grid,param_hist2,nmiss = hist_param(mBb2,p1,p2,nhist)
+param_grid,param_hist3,nmiss = hist_param(mBb3,p1,p2,nhist)
 clf()
-plot(param_grid,param_hist1)
-plot(param_grid,param_hist2)
-xlabel("Mass of brown dwarf [M_Jupiter]")
-ylabel("Relative probability")
+#plot(param_grid,param_hist1)
+#plot(param_grid,param_hist2)
+#plot(param_grid,param_hist3)
+#xlabel("Mass of brown dwarf [M_Jupiter]")
+#ylabel("Relative probability")
+
+fig, ax = subplots()
+ax[:plot](param_grid,param_hist1./maximum(param_hist3),"r-",alpha=0.6,label="Beaming",linewidth=3)
+ax[:plot](param_grid,param_hist2./maximum(param_hist3),"b-",alpha=0.6,label="Ellipsoidal",linewidth=3)
+ax[:plot](param_grid,param_hist3./maximum(param_hist3),"g-",alpha=0.6,label="Doppler RV",linewidth=3)
+ax[:set_xlabel]("Mass of brown dwarf [M_Jupiter]")
+ax[:set_ylabel]("Relative probability")
+ax[:axis]([0,200,0.,1.1])
+ax[:legend](loc ="upper right")
+PyPlot.savefig("brown_dwarf_mass_comparison.png",bbox_inches="tight")
+
 read(STDIN,Char)
 
+#
 # 4). Brightness of brown dwarf from phase-curve & secondary eclipse:
 fBb_phase = 2.*abs(par_mcmc[:,:,11])*1e6
 fBb_occult = abs(par_mcmc[:,:,16])*1e6
@@ -171,6 +197,18 @@ rBb = r21.*(mB*MSUN./rhoB.*3/4/pi).^(1//3)./RJUPITER
 mrBb = mean(rBb); srBb = std(rBb)
 println("R_Bb: ",mrBb," +- ",srBb," [R_Jupiter]")
 read(STDIN,Char)
+
+# 8). Radius of Star B:
+
+rB = (mB*MSUN./rhoB.*3/4/pi).^(1//3)./RSUN
+mrB = mean(rB); srB = std(rB)
+println("R_Bb: ",mrB," +- ",srB," [R_Jupiter]")
+
+# 9).  Compute the density from RV:
+rho_Bb = mBb3.*MJUPITER./(rBb.*RJUPITER).^3.*3./(4pi)
+mrho_Bb = mean(rho_Bb); srho_Bb = std(rho_Bb)
+println("Density of brown dwarf [g/cc]: ",mrho_Bb," +- ",srho_Bb," [g/cc]")
+
 
 # # Compute autocorrelation functions:
 # nstep_corr = 2000
