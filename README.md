@@ -39,11 +39,12 @@ julia>  include("fit_tyc3559_restart.jl")
 julia>  include("corner.jl")
 ```
 
-7). Start up python & create corner plot:
+7). From command line
 
 ```
->>>    import call_corner.py
+$   python call_corner.py
 ```
+creates a plot named "demo.png".
 
 Julia code file descriptions:
 
